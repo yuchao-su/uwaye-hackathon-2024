@@ -2,60 +2,37 @@ import numpy as np
 from scipy.optimize import least_squares
 import math
 import matplotlib.pyplot as plt
+import random
+import time
 
 # Assuming the data has been preprocessed. Irrelevant data has been ignored
 # Reads coordinate data from a file
-points = np.array(
-    [[5.00000000e+00, 0.00000000e+00],
-     [4.99743108e+00, 1.60257888e-01],
-     [4.98972696e+00, 3.20351100e-01],
-     [4.97689556e+00, 4.80115130e-01],
-     [4.95895007e+00, 6.39385808e-01],
-     [4.93590892e+00, 7.97999475e-01],
-     [4.90779578e+00, 9.55793144e-01],
-     [4.87463956e+00, 1.11260467e+00],
-     [4.83647432e+00, 1.26827292e+00],
-     [4.79333927e+00, 1.42263793e+00],
-     [4.74527874e+00, 1.57554109e+00],
-     [4.69234211e+00, 1.72682527e+00],
-     [4.63458379e+00, 1.87633502e+00],
-     [4.57206312e+00, 2.02391672e+00],
-     [4.50484434e+00, 2.16941870e+00],
-     [4.43299653e+00, 2.31269145e+00],
-     [4.35659352e+00, 2.45358776e+00],
-     [4.27571382e+00, 2.59196284e+00],
-     [4.19044052e+00, 2.72767451e+00],
-     [4.10086127e+00, 2.86058330e+00],
-     [4.00706811e+00, 2.99055265e+00],
-     [3.90915741e+00, 3.11744901e+00],
-     [3.80722979e+00, 3.24114198e+00],
-     [3.70138999e+00, 3.36150445e+00],
-     [3.59174675e+00, 3.47841275e+00],
-     [3.47841275e+00, 3.59174675e+00],
-     [3.36150445e+00, 3.70138999e+00],
-     [3.24114198e+00, 3.80722979e+00],
-     [3.11744901e+00, 3.90915741e+00],
-     [2.99055265e+00, 4.00706811e+00],
-     [2.86058330e+00, 4.10086127e+00],
-     [2.72767451e+00, 4.19044052e+00],
-     [2.59196284e+00, 4.28571382e+00],
-     [2.45358776e+00, 4.32659352e+00],
-     [2.31269145e+00, 4.43299653e+00],
-     [2.16941870e+00, 4.50484434e+00],
-     [2.02391672e+00, 4.57206312e+00],
-     [1.87633502e+00, 4.63458379e+00],
-     [1.72682527e+00, 4.69234211e+00],
-     [1.57554109e+00, 4.74527874e+00],
-     [1.42263793e+00, 4.79333927e+00],
-     [1.26827292e+00, 4.83647432e+00],
-     [1.11260467e+00, 4.87463956e+00],
-     [9.55793144e-01, 4.90779578e+00],
-     [7.97999475e-01, 4.93590892e+00],
-     [6.39385808e-01, 4.95895007e+00],
-     [4.80115130e-01, 4.97689556e+00],
-     [3.20351100e-01, 4.98972696e+00],
-     [1.60257888e-01, 4.99743108e+00],
-     [3.06161700e-16, 5.00000000e+00]])
+
+# parameter
+radius = 5
+angle_start = 0
+num = 100
+
+def generate_points(angle_end):
+    angles = np.linspace(angle_start, angle_end, num)
+    points = np.array([
+        radius * np.cos(angles),
+        radius * np.sin(angles)
+    ]).T
+
+    # 20% of the points are randomly selected for perturbation
+    num_points_to_perturb = int(0.2 * num)
+    perturb_indices = np.random.choice(num, num_points_to_perturb, replace=False)
+
+    # Range of disturbance
+    perturbation_magnitude = 0.005
+
+    # The selected point is perturbed
+    for idx in perturb_indices:
+        perturbation = np.random.normal(0, perturbation_magnitude, 2)
+        points[idx] += perturbation
+
+    return points
 
 # Function to calculate a point on a Bezier curve
 def bezier_curve(t, control_points):
@@ -107,7 +84,7 @@ def curvature(curve_points):
 # Plot the Bezier curve and original trajectory points
 def plot_curve(points, curve_points, control_points):
     plt.figure(figsize=(10, 6))
-    plt.plot(points[:, 0], points[:, 1], 'ro-', markersize=5, label='Original Points')  # Adjusted marker size here
+    plt.plot(points[:, 0], points[:, 1], 'ro-', markersize=3, label='Original Points')  # Adjusted marker size here
     plt.plot(curve_points[:, 0], curve_points[:, 1], 'b-', label='Bezier Curve')
     plt.plot(control_points[:, 0], control_points[:, 1], 'gx--', label='Control Points')
     plt.legend()
@@ -116,18 +93,24 @@ def plot_curve(points, curve_points, control_points):
     plt.title('Bezier Curve Fitting')
     plt.show()
 
-degree = 5
-control_points = fit_bezier(points, degree)
-curve_points = calculate_bezier_points(control_points)
-length = curve_length(curve_points)
-curvatures = curvature(curve_points)
-average_curvature = np.mean(curvatures)
+def doWork(angle_end):
+    points = generate_points(angle_end)
+    degree = 5
+    control_points = fit_bezier(points, degree)
+    curve_points = calculate_bezier_points(control_points)
+    length = curve_length(curve_points)
+    curvatures = curvature(curve_points)
+    average_curvature = np.mean(curvatures)
 
-print("Curve length:", length)
-print("average curvature:", average_curvature)
-print('score:', length * 8 - average_curvature * 2)
+    print("Curve length:", length)
+    print("Average curvature:", average_curvature)
+    print('Score:', length * 7 - average_curvature * 3)
 
-plot_curve(points, curve_points, control_points)
+    plot_curve(points, curve_points, control_points)
 
-
-
+for i in range(1, 11):
+    print(f"Analysing the curve: {i}")
+    angle_end = np.pi / random.uniform(1.25, 2.5)
+    doWork(angle_end)
+    print("")
+    time.sleep(1)
